@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>FastAPI Face Login</title>
+</head>
+<body>
+  <h2>FaceLogin (FastAPI Demo)</h2>
+  <video id="video" width="320" height="240" autoplay></video><br>
+  <input id="username" placeholder="username (for register)"><br><br>
+  <button id="register">Register</button>
+  <button id="login">Login</button>
+  <p id="status"></p>
+
+  <script>
+    const video = document.getElementById('video');
+    const status = document.getElementById('status');
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => { video.srcObject = stream; })
+      .catch(err => status.innerText = 'Camera error: ' + err);
+
+    function captureImage() {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 320;
+      canvas.height = video.videoHeight || 240;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/jpeg');
+    }
+
+    async function callApi(path, body) {
+      const res = await fetch(path, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      return {ok: res.ok, data};
+    }
+
+    document.getElementById('register').onclick = async () => {
+      const img = captureImage();
+      const username = document.getElementById('username').value || ('user' + Date.now());
+      status.innerText = 'Registering...';
+      const r = await callApi('/register', {username, image: img});
+      status.innerText = r.ok ? 'Registered: ' + username : 'Error: ' + (r.data.error || JSON.stringify(r.data));
+    };
+
+    document.getElementById('login').onclick = async () => {
+      const img = captureImage();
+      status.innerText = 'Logging in...';
+      const r = await callApi('/login-face', {image: img});
+      status.innerText = r.ok ? 'Login success: ' + JSON.stringify(r.data) : 'Login failed: ' + (r.data.error || JSON.stringify(r.data));
+    };
+  </script>
+</body>
+</html>
